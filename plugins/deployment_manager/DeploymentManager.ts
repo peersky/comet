@@ -458,6 +458,7 @@ export class DeploymentManager {
           const info = `@ ${tx.transactionHash}[${tx.transactionIndex}]`;
           const desc = `${info} in blockNumber: ${tx.blockNumber} emits: ${logs}`;
           debug(`[${this.network}] {${cost} Ξ}`, ...rest, desc);
+          debug(JSON.stringify(tx.events, null, 2));
           this.spent += cost;
           return tx;
         });
