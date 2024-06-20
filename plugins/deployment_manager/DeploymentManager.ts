@@ -450,7 +450,7 @@ export class DeploymentManager {
 
   tracer(): TraceFn {
     return (first, ...rest) => {
-      if (typeof first === "string") {
+      if (typeof first === 'string') {
         debug(`[${this.network}] ${first}`, ...rest);
       } else {
         return first.wait().then(async (tx: ContractReceipt) => {
@@ -461,9 +461,9 @@ export class DeploymentManager {
               'function Propose(uint256, address, address[],uint256[],string[],bytes[], uint256, uint256, string)'];
             let iface = new ethers.utils.Interface(abi);
             try {
-                let decoded = iface.parseLog(evt);
-                let calldata = iface.encodeFunctionData('Propose', decoded.args);
-                debug(['calldata:', calldata].join(' '));
+              let decoded = iface.parseLog(evt);
+              let calldata = iface.encodeFunctionData('Propose', decoded.args);
+              debug(['calldata:', calldata].join(' '));
             } catch (e) { debug(`could not decode event ${evt.event} - likely be unknown event type`);}
             return `${evt.event ?? 'unknown'}(${evt.args ?? '?'})`;
           }).join(' ');
