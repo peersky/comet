@@ -1,6 +1,6 @@
 import { diff } from 'jest-diff';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { Contract, providers } from 'ethers';
+import { Contract, ContractReceipt, providers } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Alias, Address, BuildFile, TraceFn } from './Types';
 import { getAliases, storeAliases, putAlias } from './Aliases';
@@ -17,6 +17,7 @@ import { ExtendedNonceManager } from './NonceManager';
 import { asyncCallWithTimeout, debug, getEthersContract, mergeIntoProxyContract, txCost } from './Utils';
 import { deleteVerifyArgs, getVerifyArgs } from './VerifyArgs';
 import { verifyContract, VerifyArgs, VerificationStrategy } from './Verify';
+import { ethers } from 'ethers';
 
 interface DeploymentDelta {
   old: { start: Date, count: number, spider: Spider };
@@ -449,12 +450,27 @@ export class DeploymentManager {
 
   tracer(): TraceFn {
     return (first, ...rest) => {
-      if (typeof first === 'string') {
+      if (typeof first === "string") {
         debug(`[${this.network}] ${first}`, ...rest);
       } else {
-        return first.wait().then(async (tx) => {
-          const cost = Number(txCost(tx) / (10n ** 12n)) / 1e6;
-          const logs = tx.events.map(e => `${e.event ?? 'unknown'}(${e.args ?? '?'})`).join(' ');
+        return first.wait().then(async (tx: ContractReceipt) => {
+          const cost = Number(txCost(tx) / 10n ** 12n) / 1e6;
+          debug(JSON.stringify(tx.events, null, 2));
+          const logs  = tx.events.map((evt) => {
+            let abi = [
+              'event ProposalCreated(uint256 id, address proposer, address[] targets, uint256[] values, string[] signatures, bytes',
+              'function Propose(uint256, address, address[],uint256[],string[],bytes[], uint256, uint256, string)'
+            ];
+            let iface = new ethers.utils.Interface(abi);
+            try {
+              let decoded = iface.parseLog(evt);
+              let signature = decoded.signature;
+              let calldata = iface.encodeFunctionData(signature, decoded.args);
+              debug(['calldata:', calldata].join(' '));
+            } catch (e) {
+              debug(`${e.event ?? 'unknown'}(${e.args ?? '?'})`);
+            }
+          }).join(' ');
           const info = `@ ${tx.transactionHash}[${tx.transactionIndex}]`;
           const desc = `${info} in blockNumber: ${tx.blockNumber} emits: ${logs}`;
           debug(`[${this.network}] {${cost} Ξ}`, ...rest, desc);
