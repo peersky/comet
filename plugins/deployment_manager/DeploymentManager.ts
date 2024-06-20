@@ -455,21 +455,17 @@ export class DeploymentManager {
       } else {
         return first.wait().then(async (tx: ContractReceipt) => {
           const cost = Number(txCost(tx) / 10n ** 12n) / 1e6;
-          debug(JSON.stringify(tx.events, null, 2));
           const logs  = tx.events.map((evt) => {
             let abi = [
-              'event ProposalCreated(uint256 id, address proposer, address[] targets, uint256[] values, string[] signatures, bytes',
-              'function Propose(uint256, address, address[],uint256[],string[],bytes[], uint256, uint256, string)'
-            ];
+              'event ProposalCreated(uint256,address,address[],uint256[],string[],bytes[],uint256,uint256,string)',
+              'function Propose(uint256, address, address[],uint256[],string[],bytes[], uint256, uint256, string)'];
             let iface = new ethers.utils.Interface(abi);
             try {
-              let decoded = iface.parseLog(evt);
-              let signature = decoded.signature;
-              let calldata = iface.encodeFunctionData(signature, decoded.args);
-              debug(['calldata:', calldata].join(' '));
-            } catch (e) {
-              debug(`${e.event ?? 'unknown'}(${e.args ?? '?'})`);
-            }
+                let decoded = iface.parseLog(evt);
+                let calldata = iface.encodeFunctionData('Propose', decoded.args);
+                debug(['calldata:', calldata].join(' '));
+            } catch (e) { debug(`could not decode event ${evt.event} - likely be unknown event type`);}
+            return `${evt.event ?? 'unknown'}(${evt.args ?? '?'})`;
           }).join(' ');
           const info = `@ ${tx.transactionHash}[${tx.transactionIndex}]`;
           const desc = `${info} in blockNumber: ${tx.blockNumber} emits: ${logs}`;
